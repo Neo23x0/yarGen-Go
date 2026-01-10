@@ -274,6 +274,13 @@ Features:
 
 The goodware database is loaded entirely into memory for O(1) lookups.
 
+## Screenshots
+
+![yarGen-Go Screenshot](./images/yargen-1.png)
+![yarGen-Go Screenshot](./images/yargen-2.png)
+![yarGen-Go Screenshot](./images/yargen-3.png)
+![yarGen-Go Screenshot](./images/yargen-4.png)
+
 ## Project Structure
 
 ```
