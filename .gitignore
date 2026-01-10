@@ -34,8 +34,9 @@ yargen_rules.yar
 configs/config.yaml
 
 # Compiled Binaries
-yargen
-yargen-util
+/yargen
+/yargen-util
+bin/
 
 # Editor/IDE
 # .idea/
