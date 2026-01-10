@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yarGen - YARA Rule Generator</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>yarGen</h1>
+        <nav>
+            <a href="#" id="nav-home" class="active">Generate</a>
+            <a href="#" id="nav-rules">Scoring Rules</a>
+            <a href="#" id="nav-settings">Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <section id="page-home" class="page active">
+            <div class="upload-section">
+                <div id="drop-zone" class="drop-zone">
+                    <p>Drag & drop malware samples here</p>
+                    <p>or</p>
+                    <label for="file-input" class="btn">Browse Files</label>
+                    <input type="file" id="file-input" multiple hidden>
+                </div>
+                <div id="file-list" class="file-list"></div>
+                <button id="clear-files" class="btn btn-secondary" style="display:none;">Clear Files</button>
+            </div>
+
+            <div class="options-section">
+                <h3>Options</h3>
+                <div class="options-grid">
+                    <div class="option-group">
+                        <h4>Rule Options</h4>
+                        <label><input type="checkbox" id="opt-scores"> Show scores in comments</label>
+                        <label><input type="checkbox" id="opt-no-opcodes"> Exclude opcodes</label>
+                        <label><input type="checkbox" id="opt-no-super"> Skip super rules</label>
+                        <label><input type="checkbox" id="opt-exclude-good"> Exclude goodware strings</label>
+                        <label><input type="checkbox" id="opt-no-magic"> No magic header</label>
+                        <label><input type="checkbox" id="opt-no-filesize"> No filesize</label>
+                        <label><input type="checkbox" id="opt-llm" checked> Use LLM refinement</label>
+                        <label><input type="checkbox" id="opt-debug"> Debug mode</label>
+                    </div>
+                    <div class="option-group">
+                        <h4>Parameters</h4>
+                        <label>Min string length: <input type="number" id="opt-min-len" value="8" min="4" max="50"></label>
+                        <label>Max string length: <input type="number" id="opt-max-len" value="128" min="20" max="500"></label>
+                        <label>Min score: <input type="number" id="opt-min-score" value="0" min="-100" max="100"></label>
+                        <label>Max strings/rule: <input type="number" id="opt-max-strings" value="20" min="5" max="100"></label>
+                        <label>Super rule overlap: <input type="number" id="opt-overlap" value="5" min="2" max="20"></label>
+                        <label>Filesize multiplier: <input type="number" id="opt-fs-mult" value="3" min="1" max="10"></label>
+                    </div>
+                    <div class="option-group">
+                        <h4>Metadata</h4>
+                        <label>Author: <input type="text" id="opt-author" value="yarGen"></label>
+                        <label>Reference: <input type="text" id="opt-reference" placeholder="URL or text"></label>
+                    </div>
+                </div>
+                <button id="generate-btn" class="btn btn-primary" disabled>Generate Rules</button>
+            </div>
+
+            <div id="output-section" class="output-section" style="display:none;">
+                <div class="output-header">
+                    <h3>Generated Rules</h3>
+                    <div>
+                        <button id="copy-btn" class="btn btn-small">Copy</button>
+                        <button id="download-btn" class="btn btn-small btn-primary">Download .yar</button>
+                    </div>
+                </div>
+                <pre id="rules-output"></pre>
+                
+                <div id="rule-name-section" class="rule-name-section">
+                    <div class="rule-name-header">
+                        <h4>Rule Name Suggestion</h4>
+                        <p class="hint">Select tags to help the LLM suggest a proper YARA rule name</p>
+                    </div>
+                    
+                    <div class="tag-cloud-container">
+                        <div class="tag-category" id="tag-category-Main">
+                            <span class="tag-category-label">Category:</span>
+                            <div class="tag-cloud" data-category="Main"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-Intent">
+                            <span class="tag-category-label">Intent:</span>
+                            <div class="tag-cloud" data-category="Intent"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-Type">
+                            <span class="tag-category-label">Type:</span>
+                            <div class="tag-cloud" data-category="Type"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-OS">
+                            <span class="tag-category-label">OS:</span>
+                            <div class="tag-cloud" data-category="OS"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-Arch">
+                            <span class="tag-category-label">Arch:</span>
+                            <div class="tag-cloud" data-category="Arch"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-Tech">
+                            <span class="tag-category-label">Tech:</span>
+                            <div class="tag-cloud" data-category="Tech"></div>
+                        </div>
+                        <div class="tag-category" id="tag-category-Modifier">
+                            <span class="tag-category-label">Modifier:</span>
+                            <div class="tag-cloud" data-category="Modifier"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="rule-name-inputs">
+                        <label>
+                            Description (optional):
+                            <input type="text" id="rule-description-input" placeholder="Brief description of the malware/sample">
+                        </label>
+                    </div>
+                    
+                    <button id="suggest-name-btn" class="btn btn-primary" disabled>Suggest Rule Name</button>
+                    
+                    <div id="suggested-name-result" class="suggested-name-result" style="display:none;">
+                        <div class="suggested-name">
+                            <span class="label">Suggested Name:</span>
+                            <code id="suggested-name-value"></code>
+                            <button id="copy-name-btn" class="btn btn-small">Copy</button>
+                            <button id="apply-name-btn" class="btn btn-small btn-primary">Apply to Rules</button>
+                        </div>
+                        <div class="suggested-tags">
+                            <span class="label">Tags used:</span>
+                            <span id="suggested-tags-value"></span>
+                        </div>
+                        <div class="suggested-reasoning">
+                            <span class="label">Reasoning:</span>
+                            <span id="suggested-reasoning-value"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="debug-section" class="debug-section" style="display:none;">
+                <div class="output-header">
+                    <h3>Debug Log (String Selection)</h3>
+                </div>
+                <pre id="debug-output"></pre>
+            </div>
+
+            <div id="status-section" class="status-section" style="display:none;">
+                <div id="status-message"></div>
+                <div id="progress-bar" class="progress-bar"><div class="progress"></div></div>
+            </div>
+        </section>
+
+        <section id="page-rules" class="page">
+            <div class="rules-header">
+                <h2>Scoring Rules</h2>
+                <div>
+                    <button id="add-rule-btn" class="btn btn-primary">+ Add Rule</button>
+                    <button id="import-rules-btn" class="btn btn-small">Import</button>
+                    <button id="export-rules-btn" class="btn btn-small">Export</button>
+                </div>
+            </div>
+
+            <div class="rules-filters">
+                <select id="rules-filter-category">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="rules-filter-type">
+                    <option value="">All Types</option>
+                    <option value="builtin">Built-in</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <input type="text" id="rules-search" placeholder="Search rules...">
+            </div>
+
+            <table id="rules-table">
+                <thead>
+                    <tr>
+                        <th>Enabled</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Pattern</th>
+                        <th>Score</th>
+                        <th>Category</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-tbody"></tbody>
+            </table>
+        </section>
+
+        <section id="page-settings" class="page">
+            <h2>Settings</h2>
+            <div class="settings-section">
+                <h3>LLM Configuration</h3>
+                <div id="llm-status"></div>
+                
+                <div class="llm-help-section">
+                    <button id="llm-help-toggle" class="btn btn-small">Show Configuration Help</button>
+                    <div id="llm-help-content" class="llm-help-content" style="display:none;">
+                        <h4>Configuration File Location</h4>
+                        <p class="hint">The default config file location is <code>./config/config.yaml</code> (in the project directory).</p>
+                        <p class="hint">You can also use the <code>--config</code> flag to specify a different location:</p>
+                        <div class="config-path-list">
+                            <div class="config-path-item">
+                                <strong>Default (Project Directory):</strong>
+                                <code>./config/config.yaml</code>
+                                <span class="config-path-note">Recommended - keeps config with the project</span>
+                            </div>
+                            <div class="config-path-item">
+                                <strong>Alternative (Home Directory - Linux/macOS):</strong>
+                                <code>~/.yargen/config.yml</code>
+                                <span class="config-path-note">Use with <code>--config ~/.yargen/config.yml</code> flag</span>
+                            </div>
+                            <div class="config-path-item">
+                                <strong>Alternative (Home Directory - Windows):</strong>
+                                <code>%USERPROFILE%\.yargen\config.yml</code>
+                                <span class="config-path-note">Use with <code>--config</code> flag</span>
+                            </div>
+                        </div>
+
+                        <h4>Environment Variables</h4>
+                        <p class="hint">You can use environment variables in the config file using <code>${VARIABLE_NAME}</code> syntax:</p>
+                        
+                        <div class="env-var-section">
+                            <div class="env-var-platform">
+                                <strong>Linux / macOS:</strong>
+                                <div class="code-block">
+                                    <div class="code-block-header">Terminal</div>
+                                    <pre>export OPENAI_API_KEY="sk-your-key-here"
+export ANTHROPIC_API_KEY="sk-ant-your-key-here"
+export GEMINI_API_KEY="your-gemini-key-here"
+
+# Or set in ~/.bashrc or ~/.zshrc for persistence</pre>
+                                </div>
+                            </div>
+                            
+                            <div class="env-var-platform">
+                                <strong>Windows (PowerShell):</strong>
+                                <div class="code-block">
+                                    <div class="code-block-header">PowerShell</div>
+                                    <pre>$env:OPENAI_API_KEY="sk-your-key-here"
+$env:ANTHROPIC_API_KEY="sk-ant-your-key-here"
+$env:GEMINI_API_KEY="your-gemini-key-here"
+
+# Or set permanently:
+[System.Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "sk-your-key-here", "User")</pre>
+                                </div>
+                            </div>
+                            
+                            <div class="env-var-platform">
+                                <strong>Windows (Command Prompt):</strong>
+                                <div class="code-block">
+                                    <div class="code-block-header">CMD</div>
+                                    <pre>set OPENAI_API_KEY=sk-your-key-here
+set ANTHROPIC_API_KEY=sk-ant-your-key-here
+set GEMINI_API_KEY=your-gemini-key-here
+
+# Or set permanently via System Properties → Environment Variables</pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4>Example Configuration</h4>
+                        <p class="hint">Example <code>config.yml</code> file:</p>
+                        
+                        <div class="code-block">
+                            <div class="code-block-header">config.yml</div>
+                            <pre>llm:
+  provider: "openai"  # openai, anthropic, gemini, ollama
+  model: "gpt-4o-mini"
+  api_key: "${OPENAI_API_KEY}"  # Uses environment variable
+  endpoint: ""  # Empty for default, or "http://localhost:11434" for Ollama
+  timeout: 60
+  max_candidates: 500
+
+database:
+  dbs_dir: "./dbs"
+  scoring_db: "~/.yargen/scoring.db"
+
+defaults:
+  author: "yarGen"
+  min_string_length: 8
+  max_string_length: 128
+  min_score: 0</pre>
+                        </div>
+
+                        <h4>Provider-Specific Configuration</h4>
+                        <div class="provider-list">
+                            <div class="provider-item">
+                                <strong>OpenAI:</strong>
+                                <ul>
+                                    <li>Get API key: <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a></li>
+                                    <li>Environment variable: <code>OPENAI_API_KEY</code></li>
+                                    <li>Models: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4-turbo</code></li>
+                                </ul>
+                            </div>
+                            
+                            <div class="provider-item">
+                                <strong>Anthropic:</strong>
+                                <ul>
+                                    <li>Get API key: <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com/settings/keys</a></li>
+                                    <li>Environment variable: <code>ANTHROPIC_API_KEY</code></li>
+                                    <li>Models: <code>claude-sonnet-4-20250514</code>, <code>claude-opus-4-20250514</code>, <code>claude-3-5-haiku-20241022</code></li>
+                                </ul>
+                            </div>
+                            
+                            <div class="provider-item">
+                                <strong>Google Gemini:</strong>
+                                <ul>
+                                    <li>Get API key: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></li>
+                                    <li>Environment variable: <code>GEMINI_API_KEY</code></li>
+                                    <li>Models: <code>gemini-1.5-pro</code>, <code>gemini-1.5-flash</code>, <code>gemini-2.0-flash</code></li>
+                                </ul>
+                            </div>
+                            
+                            <div class="provider-item">
+                                <strong>Ollama (Local):</strong>
+                                <ul>
+                                    <li>Install: <a href="https://ollama.com" target="_blank">ollama.com</a></li>
+                                    <li>No API key needed for local instances</li>
+                                    <li>Endpoint: <code>http://localhost:11434</code></li>
+                                    <li>Models: <code>llama3.3</code>, <code>llama3.2</code>, <code>qwen2.5</code>, <code>mistral</code></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <h4>Quick Start</h4>
+                        <ol class="quick-start-list">
+                            <li>Create the config directory:
+                                <div class="code-block code-block-inline">
+                                    <div class="code-block-header">Linux/macOS</div>
+                                    <pre>mkdir -p ~/.yargen</pre>
+                                </div>
+                                <div class="code-block code-block-inline">
+                                    <div class="code-block-header">Windows (PowerShell)</div>
+                                    <pre>New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.yargen"</pre>
+                                </div>
+                            </li>
+                            <li>Set your API key as an environment variable (see above)</li>
+                            <li>Create <code>config.yml</code> in the directory with your provider settings</li>
+                            <li>Restart yarGen to load the configuration</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add Rule</h3>
+                <button id="modal-close" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="rule-form">
+                    <input type="hidden" id="rule-id">
+                    <label>Name: <input type="text" id="rule-name" required></label>
+                    <label>Description: <input type="text" id="rule-description"></label>
+                    <label>Match Type:
+                        <select id="rule-match-type">
+                            <option value="exact">Exact</option>
+                            <option value="contains">Contains</option>
+                            <option value="regex">Regex</option>
+                        </select>
+                    </label>
+                    <label>Pattern: <input type="text" id="rule-pattern" required></label>
+                    <label>Score: <input type="number" id="rule-score" value="5" min="-100" max="100" required></label>
+                    <label>Category: <input type="text" id="rule-category"></label>
+                    <label><input type="checkbox" id="rule-enabled" checked> Enabled</label>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="modal-save" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="import-file" accept=".json" hidden>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

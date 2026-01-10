@@ -1,0 +1,86 @@
+# yarGen Configuration File
+# Copy to ./config/config.yaml (default location)
+# Or use --config flag to specify a different location
+
+# LLM Configuration for AI-assisted string selection
+llm:
+  # Provider: openai, anthropic, gemini, ollama
+  provider: "openai"
+  
+  # Model name (provider-specific)
+  # 
+  # OpenAI models:
+  #   - gpt-4o              (recommended, best quality)
+  #   - gpt-4o-mini         (faster, cheaper)
+  #   - gpt-4-turbo         (high quality)
+  #   - o1-mini             (reasoning model)
+  #
+  # Anthropic models:
+  #   - claude-sonnet-4-20250514  (recommended, balanced)
+  #   - claude-opus-4-20250514    (highest quality)
+  #   - claude-3-5-haiku-20241022 (fastest, cheapest)
+  #
+  # Google Gemini models:
+  #   - gemini-1.5-pro      (recommended)
+  #   - gemini-1.5-flash    (faster, cheaper)
+  #   - gemini-2.0-flash    (latest fast model)
+  #
+  # Ollama models (local):
+  #   - llama3.3            (recommended, 70B)
+  #   - llama3.2            (smaller, 3B/1B available)
+  #   - qwen2.5             (good for code/analysis)
+  #   - mistral             (7B, fast)
+  #   - deepseek-r1         (reasoning model)
+  #
+  # Ollama cloud models (requires API key from ollama.com):
+  #   - gpt-oss:120b        (large open model)
+  #   - mistral-large       
+  #
+  model: "gpt-4o-mini"
+  
+  # API key (supports environment variable expansion)
+  # OpenAI: https://platform.openai.com/api-keys
+  # Anthropic: https://console.anthropic.com/settings/keys
+  # Gemini: https://aistudio.google.com/app/apikey
+  # Ollama cloud: https://ollama.com/settings/keys (not needed for local)
+  api_key: "${OPENAI_API_KEY}"
+  
+  # Custom endpoint (optional)
+  # 
+  # For Ollama local:    http://localhost:11434
+  # For Ollama cloud:    https://ollama.com
+  # Leave empty to use provider defaults
+  endpoint: ""
+  
+  # Request timeout in seconds
+  timeout: 60
+  
+  # Max candidates to send to LLM (limits token usage)
+  # yarGen will sort strings by score and send only the top N to the LLM
+  max_candidates: 500
+
+# Database paths
+database:
+  # Directory containing goodware databases
+  dbs_dir: "./dbs"
+  
+  # SQLite database for scoring rules
+  scoring_db: "~/.yargen/scoring.db"
+
+# Default rule generation options
+defaults:
+  author: "yarGen"
+  min_string_length: 8
+  max_string_length: 128
+  min_score: 0
+  high_score_threshold: 30
+  max_strings_per_rule: 20
+  super_rule_overlap: 5
+  filesize_multiplier: 3
+  include_opcodes: false
+  num_opcodes: 3
+
+# Web server configuration
+server:
+  host: "127.0.0.1"
+  port: 8080

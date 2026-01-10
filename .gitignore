@@ -27,6 +27,22 @@ go.work.sum
 # env file
 .env
 
+# Custom data folders
+example-malware/
+dbs/
+yargen_rules.yar
+configs/config.yaml
+
+# Compiled Binaries
+yargen
+yargen-util
+
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Plans
+.plans/
+
+# Disabled git folder
+.git_disabled/
