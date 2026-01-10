@@ -1,3 +1,5 @@
+![yarGen-Go](./images/yargen-go-logo.png)
+
 # yarGen-Go
 
 A Go rewrite of [yarGen](https://github.com/Neo23x0/yarGen) - an automatic YARA rule generator.
