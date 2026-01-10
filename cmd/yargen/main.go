@@ -171,7 +171,11 @@ func runServer() {
 	port := serveCmd.Int("port", 8080, "HTTP port")
 	configPath := serveCmd.String("config", config.DefaultConfigPath(), "Config file path")
 
-	serveCmd.Parse(os.Args[2:])
+	if err := serveCmd.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		serveCmd.Usage()
+		os.Exit(1)
+	}
 
 	printBanner()
 

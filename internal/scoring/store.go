@@ -184,7 +184,9 @@ func (s *Store) Import(rules []Rule, replaceAll bool) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error - transaction may have been committed
+	}()
 
 	if replaceAll {
 		if _, err := tx.Exec("DELETE FROM scoring_rules WHERE is_builtin = 0"); err != nil {

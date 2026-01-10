@@ -254,7 +254,10 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 	if len(parts) > 1 && parts[1] == "rules" {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"yargen_rules_%s.yar\"", jobID[:8]))
-		w.Write([]byte(job.Rules))
+		if _, err := w.Write([]byte(job.Rules)); err != nil {
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -285,7 +288,10 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		s.yargen.ReloadScoringRules()
+		if err := s.yargen.ReloadScoringRules(); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to reload scoring rules: %v", err), http.StatusInternalServerError)
+			return
+		}
 		writeJSON(w, rule)
 
 	default:
@@ -328,7 +334,10 @@ func (s *Server) handleRulesById(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		s.yargen.ReloadScoringRules()
+		if err := s.yargen.ReloadScoringRules(); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to reload scoring rules: %v", err), http.StatusInternalServerError)
+			return
+		}
 		writeJSON(w, rule)
 
 	case http.MethodDelete:
@@ -336,7 +345,10 @@ func (s *Server) handleRulesById(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		s.yargen.ReloadScoringRules()
+		if err := s.yargen.ReloadScoringRules(); err != nil {
+			http.Error(w, fmt.Sprintf("Failed to reload scoring rules: %v", err), http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusNoContent)
 
 	default:
@@ -381,7 +393,10 @@ func (s *Server) handleRulesImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.yargen.ReloadScoringRules()
+	if err := s.yargen.ReloadScoringRules(); err != nil {
+		// Log error but continue - rules import may have partially succeeded
+		fmt.Printf("[W] Failed to reload scoring rules after import: %v\n", err)
+	}
 
 	writeJSON(w, map[string]int{"imported": len(rules)})
 }

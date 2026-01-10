@@ -123,7 +123,9 @@ func (s *Store) seedBuiltinRules() error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback() // Ignore error - transaction may have been committed
+	}()
 
 	stmt, err := tx.Prepare("INSERT INTO scoring_rules (name, description, match_type, pattern, score, enabled, is_builtin, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {

@@ -60,7 +60,11 @@ func printUsage() {
 func cmdUpdate() {
 	fs := flag.NewFlagSet("update", flag.ExitOnError)
 	dbsDir := fs.String("dbs-dir", "./dbs", "Database directory")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	fmt.Println("[+] Downloading databases...")
 
@@ -83,7 +87,11 @@ func cmdCreate() {
 	dbsDir := fs.String("dbs-dir", "./dbs", "Database directory")
 	opcodes := fs.Bool("opcodes", false, "Include opcodes")
 	recursive := fs.Bool("r", true, "Recursive scan")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	if *goodwareDir == "" {
 		fmt.Fprintln(os.Stderr, "[E] Goodware directory required (-g)")
@@ -142,7 +150,11 @@ func cmdAppend() {
 	dbsDir := fs.String("dbs-dir", "./dbs", "Database directory")
 	opcodes := fs.Bool("opcodes", false, "Include opcodes")
 	recursive := fs.Bool("r", true, "Recursive scan")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	if *goodwareDir == "" {
 		fmt.Fprintln(os.Stderr, "[E] Goodware directory required (-g)")
@@ -206,7 +218,11 @@ func cmdAppend() {
 func cmdInspect() {
 	fs := flag.NewFlagSet("inspect", flag.ExitOnError)
 	topN := fs.Int("top", 10, "Show top N entries")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	if fs.NArg() < 1 {
 		fmt.Fprintln(os.Stderr, "[E] Database file required")
@@ -237,7 +253,11 @@ func cmdInspect() {
 func cmdMerge() {
 	fs := flag.NewFlagSet("merge", flag.ExitOnError)
 	output := fs.String("o", "", "Output database file (required)")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	if *output == "" {
 		fmt.Fprintln(os.Stderr, "[E] Output file required (-o)")
@@ -266,7 +286,11 @@ func cmdMerge() {
 func cmdList() {
 	fs := flag.NewFlagSet("list", flag.ExitOnError)
 	dbsDir := fs.String("dbs-dir", "./dbs", "Database directory")
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintf(os.Stderr, "[E] Failed to parse flags: %v\n", err)
+		fs.Usage()
+		os.Exit(1)
+	}
 
 	databases, err := database.ListDatabases(*dbsDir)
 	if err != nil {
