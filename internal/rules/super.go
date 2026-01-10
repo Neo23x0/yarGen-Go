@@ -162,7 +162,7 @@ func generateSuperRule(sr SuperRuleCandidate, opts GenerateOptions, usedNames ma
 	conditions = append(conditions, stringCond)
 
 	sb.WriteString(fmt.Sprintf("      (%s)\n", strings.Join(conditions, " and ")))
-	sb.WriteString(fmt.Sprintf("      or (all of them)\n"))
+	sb.WriteString("      or (all of them)\n")
 
 	sb.WriteString("}\n")
 

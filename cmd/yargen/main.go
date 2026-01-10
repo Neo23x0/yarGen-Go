@@ -221,7 +221,9 @@ func runServer() {
 	go func() {
 		<-sigCh
 		fmt.Println("\n[!] Shutting down server...")
-		server.Shutdown(context.Background())
+		if err := server.Shutdown(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "[E] Error shutting down server: %v\n", err)
+		}
 	}()
 
 	fmt.Printf("[+] Starting web server at http://%s:%d\n", *host, *port)
