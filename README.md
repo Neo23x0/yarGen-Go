@@ -13,11 +13,33 @@ yarGen-Go generates YARA rules from strings found in malware files while removin
 
 ## Getting Started
 
-1. **Prerequisites:** Install Go 1.22+ (no C compiler needed - uses pure Go SQLite)
-2. **Build:** Clone repository and run `go build -o yargen ./cmd/yargen`
-3. **Databases:** Run `./yargen-util update` to download goodware databases
-4. **Configure (Optional):** Copy `config/config.example.yml` to `config/config.yaml` and set your LLM API key
-5. **Use:** Run `./yargen -m ./malware-samples` or `./yargen serve` for Web UI
+**Linux/macOS:**
+
+1. **Prerequisites:** Install Go 1.22+
+2. **Build:** Clone repository or download the ZIP and extract it
+3. **Build binaries:** Run the following commands:
+   ```bash
+   go mod tidy
+   go build -o yargen ./cmd/yargen
+   go build -o yargen-util ./cmd/yargen-util
+   ```
+4. **Databases:** Run `./yargen-util update` to download goodware databases
+5. **Configure (Optional):** Copy `config/config.example.yml` to `config/config.yaml` and set your LLM API key
+6. **Use:** Run `./yargen serve` and open the Web UI at [http://127.0.0.1:8080](http://127.0.0.1:8080)
+
+**Windows:**
+
+1. **Prerequisites:** Install Go 1.22+
+2. **Build:** Clone repository or download the ZIP and extract it
+3. **Build binaries:** Run the following commands:
+   ```powershell
+   go mod tidy
+   go build -o yargen.exe .\cmd\yargen
+   go build -o yargen-util.exe .\cmd\yargen-util
+   ```
+4. **Databases:** Run `yargen-util.exe update` to download goodware databases
+5. **Configure (Optional):** Copy `.\config\config.example.yml` to `.\config\config.yaml` and set your LLM API key
+6. **Use:** Run `yargen.exe serve` and open the Web UI at [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
 📖 **For detailed setup instructions, see the [Step-by-Step Setup Guide](docs/SETUP.md)**
 
