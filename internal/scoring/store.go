@@ -6,9 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
+// MatchType represents the type of pattern matching for a scoring rule.
 type MatchType string
 
 const (
@@ -17,6 +18,7 @@ const (
 	MatchRegex    MatchType = "regex"
 )
 
+// Rule represents a scoring rule for string evaluation.
 type Rule struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
@@ -29,17 +31,19 @@ type Rule struct {
 	Category    string    `json:"category"`
 }
 
+// Store provides database operations for scoring rules.
 type Store struct {
 	db *sql.DB
 }
 
+// NewStore creates a new scoring rule store with the given database path.
 func NewStore(dbPath string) (*Store, error) {
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -145,7 +149,11 @@ func (s *Store) Create(r *Rule) error {
 	if err != nil {
 		return err
 	}
-	r.ID, _ = result.LastInsertId()
+	id, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("failed to get last insert id: %w", err)
+	}
+	r.ID = id
 	return nil
 }
 

@@ -6,23 +6,9 @@ This guide will walk you through installing and configuring yarGen-Go from scrat
 
 **Required:**
 - **Go 1.22 or later** - [Download Go](https://go.dev/dl/)
-- **GCC compiler** - Required for SQLite (CGO)
+- No C compiler needed - uses pure Go SQLite implementation
 
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt-get update
-sudo apt-get install build-essential gcc
-```
-
-**macOS:**
-```bash
-# Install Xcode Command Line Tools
-xcode-select --install
-```
-
-**Windows:**
-- Install [MinGW-w64](https://www.mingw-w64.org/downloads/) or [TDM-GCC](https://jmeubank.github.io/tdm-gcc/)
-- Ensure `gcc` is in your PATH
+**Note:** Previous versions required GCC for SQLite compilation, but yarGen-Go now uses a pure Go SQLite implementation (`modernc.org/sqlite`) which requires no C compiler. This makes building on Windows much easier!
 
 ## Step 2: Clone and Build
 
@@ -230,7 +216,6 @@ Then open http://127.0.0.1:8080 in your browser.
 ## Troubleshooting
 
 **Build Issues:**
-- **CGO errors**: Ensure GCC is installed and in PATH
 - **Go version**: Update to Go 1.22+ if you see version errors
 - **Permission denied**: On Linux/macOS, you may need `chmod +x yargen yargen-util`
 

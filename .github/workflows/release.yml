@@ -46,8 +46,6 @@ jobs:
         run: go mod download
       
       - name: Build binaries
-        env:
-          CGO_ENABLED: 1
         run: |
           mkdir -p release
           

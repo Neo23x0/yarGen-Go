@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Neo23x0/yarern-go/internal/filter"
+	"github.com/Neo23x0/yarGen-go/internal/filter"
 )
 
 type SuperRuleCandidate struct {

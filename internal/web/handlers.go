@@ -14,11 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Neo23x0/yarern-go/internal/llm"
-	"github.com/Neo23x0/yarern-go/internal/scoring"
-	"github.com/Neo23x0/yarern-go/internal/service"
+	"github.com/Neo23x0/yarGen-go/internal/llm"
+	"github.com/Neo23x0/yarGen-go/internal/scoring"
+	"github.com/Neo23x0/yarGen-go/internal/service"
 )
 
+// Job represents a rule generation job.
 type Job struct {
 	ID        string                  `json:"id"`
 	Status    string                  `json:"status"`
@@ -30,12 +31,14 @@ type Job struct {
 	CreatedAt time.Time               `json:"created_at"`
 }
 
+// UploadedFile represents an uploaded malware sample file.
 type UploadedFile struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Path string `json:"-"`
 }
 
+// StringInfo contains information about an extracted string.
 type StringInfo struct {
 	Value         string  `json:"value"`
 	Score         float64 `json:"score"`
@@ -50,9 +53,22 @@ var (
 	jobsMu sync.RWMutex
 )
 
+// writeJSON encodes data as JSON and writes it to the response writer.
+func writeJSON(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		// If encoding fails, the connection is likely broken
+		// Log but don't try to write another response
+		fmt.Printf("[E] Failed to encode JSON response: %v\n", err)
+	}
+}
+
 func generateJobID() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback: use timestamp-based ID if crypto/rand fails
+		return fmt.Sprintf("%x", time.Now().UnixNano())
+	}
 	return hex.EncodeToString(b)
 }
 
@@ -90,7 +106,11 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			io.Copy(dest, file)
+			if _, err := io.Copy(dest, file); err != nil {
+				file.Close()
+				dest.Close()
+				continue
+			}
 			file.Close()
 			dest.Close()
 
@@ -118,10 +138,10 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	jobs[jobID] = job
 	jobsMu.Unlock()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(job)
+	writeJSON(w, job)
 }
 
+// GenerateRequest contains parameters for rule generation.
 type GenerateRequest struct {
 	JobID           string  `json:"job_id"`
 	Author          string  `json:"author"`
@@ -208,8 +228,7 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		jobsMu.Unlock()
 	}()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "processing"})
+	writeJSON(w, map[string]string{"status": "processing"})
 }
 
 func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
@@ -239,8 +258,7 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(job)
+	writeJSON(w, job)
 }
 
 func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
@@ -253,8 +271,7 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rules)
+		writeJSON(w, rules)
 
 	case http.MethodPost:
 		var rule scoring.Rule
@@ -269,8 +286,7 @@ func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.yargen.ReloadScoringRules()
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rule)
+		writeJSON(w, rule)
 
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -299,8 +315,7 @@ func (s *Server) handleRulesById(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Rule not found", http.StatusNotFound)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rule)
+		writeJSON(w, rule)
 
 	case http.MethodPut:
 		var rule scoring.Rule
@@ -314,8 +329,7 @@ func (s *Server) handleRulesById(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		s.yargen.ReloadScoringRules()
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(rule)
+		writeJSON(w, rule)
 
 	case http.MethodDelete:
 		if err := store.Delete(id); err != nil {
@@ -344,7 +358,10 @@ func (s *Server) handleRulesExport(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"scoring_rules.json\"")
-	json.NewEncoder(w).Encode(rules)
+	if err := json.NewEncoder(w).Encode(rules); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleRulesImport(w http.ResponseWriter, r *http.Request) {
@@ -366,8 +383,7 @@ func (s *Server) handleRulesImport(w http.ResponseWriter, r *http.Request) {
 
 	s.yargen.ReloadScoringRules()
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]int{"imported": len(rules)})
+	writeJSON(w, map[string]int{"imported": len(rules)})
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -387,15 +403,14 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		"llm_error":      llmStatus.Error,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, response)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	writeJSON(w, map[string]string{"status": "ok"})
 }
 
+// SuggestNameRequest contains parameters for rule name suggestion.
 type SuggestNameRequest struct {
 	JobID       string   `json:"job_id"`
 	Tags        []string `json:"tags"`
@@ -457,8 +472,7 @@ func (s *Server) handleSuggestName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, resp)
 }
 
 func (s *Server) handleTags(w http.ResponseWriter, r *http.Request) {
@@ -467,6 +481,5 @@ func (s *Server) handleTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(llm.CommonTags)
+	writeJSON(w, llm.CommonTags)
 }

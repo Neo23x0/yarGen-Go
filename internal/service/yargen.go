@@ -8,13 +8,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Neo23x0/yarern-go/internal/config"
-	"github.com/Neo23x0/yarern-go/internal/database"
-	"github.com/Neo23x0/yarern-go/internal/filter"
-	"github.com/Neo23x0/yarern-go/internal/llm"
-	"github.com/Neo23x0/yarern-go/internal/rules"
-	"github.com/Neo23x0/yarern-go/internal/scanner"
-	"github.com/Neo23x0/yarern-go/internal/scoring"
+	"github.com/Neo23x0/yarGen-go/internal/config"
+	"github.com/Neo23x0/yarGen-go/internal/database"
+	"github.com/Neo23x0/yarGen-go/internal/filter"
+	"github.com/Neo23x0/yarGen-go/internal/llm"
+	"github.com/Neo23x0/yarGen-go/internal/rules"
+	"github.com/Neo23x0/yarGen-go/internal/scanner"
+	"github.com/Neo23x0/yarGen-go/internal/scoring"
 )
 
 type YarGen struct {

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Neo23x0/yarern-go/internal/filter"
-	"github.com/Neo23x0/yarern-go/internal/scanner"
+	"github.com/Neo23x0/yarGen-go/internal/filter"
+	"github.com/Neo23x0/yarGen-go/internal/scanner"
 )
 
 type GenerateOptions struct {

@@ -13,7 +13,7 @@ yarGen-Go generates YARA rules from strings found in malware files while removin
 
 ## Getting Started
 
-1. **Prerequisites:** Install Go 1.22+ and GCC
+1. **Prerequisites:** Install Go 1.22+ (no C compiler needed - uses pure Go SQLite)
 2. **Build:** Clone repository and run `go build -o yargen ./cmd/yargen`
 3. **Databases:** Run `./yargen-util update` to download goodware databases
 4. **Configure (Optional):** Copy `config/config.example.yml` to `config/config.yaml` and set your LLM API key

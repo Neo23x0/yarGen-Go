@@ -3,8 +3,8 @@ package filter
 import (
 	"strings"
 
-	"github.com/Neo23x0/yarern-go/internal/database"
-	"github.com/Neo23x0/yarern-go/internal/extractor"
+	"github.com/Neo23x0/yarGen-go/internal/database"
+	"github.com/Neo23x0/yarGen-go/internal/extractor"
 )
 
 var preferredOpcodePatterns = []string{

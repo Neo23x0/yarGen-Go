@@ -8,19 +8,21 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Neo23x0/yarern-go/internal/config"
-	"github.com/Neo23x0/yarern-go/internal/service"
+	"github.com/Neo23x0/yarGen-go/internal/config"
+	"github.com/Neo23x0/yarGen-go/internal/service"
 )
 
 //go:embed static/*
 var staticFiles embed.FS
 
+// Server represents the HTTP server for the yarGen web UI.
 type Server struct {
 	httpServer *http.Server
 	yargen     *service.YarGen
 	config     *config.Config
 }
 
+// NewServer creates a new HTTP server with the given configuration and yarGen service.
 func NewServer(cfg *config.Config, yargen *service.YarGen) *Server {
 	s := &Server{
 		yargen: yargen,
@@ -41,7 +43,11 @@ func NewServer(cfg *config.Config, yargen *service.YarGen) *Server {
 	mux.HandleFunc("/api/suggest-name", s.corsMiddleware(s.handleSuggestName))
 	mux.HandleFunc("/api/tags", s.corsMiddleware(s.handleTags))
 
-	staticFS, _ := fs.Sub(staticFiles, "static")
+	staticFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		// This should never happen as the path is hardcoded
+		panic(fmt.Errorf("failed to create static filesystem: %w", err))
+	}
 	fileServer := http.FileServer(http.FS(staticFS))
 	mux.Handle("/", fileServer)
 

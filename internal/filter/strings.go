@@ -3,9 +3,9 @@ package filter
 import (
 	"sort"
 
-	"github.com/Neo23x0/yarern-go/internal/database"
-	"github.com/Neo23x0/yarern-go/internal/extractor"
-	"github.com/Neo23x0/yarern-go/internal/scoring"
+	"github.com/Neo23x0/yarGen-go/internal/database"
+	"github.com/Neo23x0/yarGen-go/internal/extractor"
+	"github.com/Neo23x0/yarGen-go/internal/scoring"
 )
 
 type FilterOptions struct {

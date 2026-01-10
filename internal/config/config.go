@@ -9,6 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Config represents the application configuration.
 type Config struct {
 	LLM      LLMConfig      `yaml:"llm"`
 	Database DatabaseConfig `yaml:"database"`
@@ -16,6 +17,7 @@ type Config struct {
 	Server   ServerConfig   `yaml:"server"`
 }
 
+// LLMConfig contains settings for LLM integration.
 type LLMConfig struct {
 	Provider       string `yaml:"provider"`
 	Model          string `yaml:"model"`
@@ -26,11 +28,13 @@ type LLMConfig struct {
 	PromptTemplate string `yaml:"prompt_template"`
 }
 
+// DatabaseConfig contains database paths and settings.
 type DatabaseConfig struct {
 	DbsDir    string `yaml:"dbs_dir"`
 	ScoringDb string `yaml:"scoring_db"`
 }
 
+// DefaultsConfig contains default values for rule generation.
 type DefaultsConfig struct {
 	Author            string `yaml:"author"`
 	MinStringLength   int    `yaml:"min_string_length"`
@@ -44,11 +48,13 @@ type DefaultsConfig struct {
 	NumOpcodes        int    `yaml:"num_opcodes"`
 }
 
+// ServerConfig contains web server settings.
 type ServerConfig struct {
 	Host string `yaml:"host"`
 	Port int    `yaml:"port"`
 }
 
+// DefaultConfig returns a new Config with default values.
 func DefaultConfig() *Config {
 	cfg := &Config{
 		LLM: LLMConfig{
@@ -86,6 +92,7 @@ func DefaultConfig() *Config {
 	return cfg
 }
 
+// Load reads and parses a configuration file from the given path.
 func Load(path string) (*Config, error) {
 	cfg := DefaultConfig()
 	
@@ -115,6 +122,7 @@ func LoadDefault() (*Config, error) {
 	return Load(FindConfigPath())
 }
 
+// Save writes the configuration to a file at the given path.
 func (c *Config) Save(path string) error {
 	expanded := expandPath(path)
 	dir := filepath.Dir(expanded)
@@ -135,18 +143,18 @@ func (c *Config) Save(path string) error {
 // Checks in order: ./config/config.yaml, ~/.yargen/config.yaml, ~/.yargen/config.yml
 func FindConfigPath() string {
 	paths := []string{
-		"./config/config.yaml",        // New default: project directory
-		"~/.yargen/config.yaml",       // Legacy: home directory (YAML)
-		"~/.yargen/config.yml",        // Legacy: home directory (YML)
+		"./config/config.yaml",  // New default: project directory
+		"~/.yargen/config.yaml", // Legacy: home directory (YAML)
+		"~/.yargen/config.yml",  // Legacy: home directory (YML)
 	}
-	
+
 	for _, path := range paths {
 		expanded := expandPath(path)
 		if _, err := os.Stat(expanded); err == nil {
 			return path
 		}
 	}
-	
+
 	// Return default if none found
 	return paths[0]
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// Engine evaluates strings against scoring rules.
 type Engine struct {
 	store    *Store
 	rules    []Rule
@@ -13,6 +14,7 @@ type Engine struct {
 	mu       sync.RWMutex
 }
 
+// NewEngine creates a new scoring engine with the given store.
 func NewEngine(store *Store) (*Engine, error) {
 	e := &Engine{
 		store:    store,
@@ -51,12 +53,14 @@ func (e *Engine) Reload() error {
 	return nil
 }
 
+// ScoreResult contains the scoring results for a string.
 type ScoreResult struct {
 	TotalScore    float64
 	MatchedRules  []MatchedRule
 	EncodingBonus float64
 }
 
+// MatchedRule represents a scoring rule that matched a string.
 type MatchedRule struct {
 	RuleID   int64
 	RuleName string
@@ -119,6 +123,7 @@ func (e *Engine) ScoreWithGoodware(s string, goodwareCount int, excludeGoodware 
 	return result
 }
 
+// ScoredString contains a string with its scoring information.
 type ScoredString struct {
 	Value        string        `json:"value"`
 	Score        float64       `json:"score"`
@@ -128,6 +133,7 @@ type ScoredString struct {
 	EncodingInfo *EncodingInfo `json:"encoding_info,omitempty"`
 }
 
+// EncodingInfo contains information about detected string encodings.
 type EncodingInfo struct {
 	Type         string `json:"type"`
 	DecodedValue string `json:"decoded_value,omitempty"`

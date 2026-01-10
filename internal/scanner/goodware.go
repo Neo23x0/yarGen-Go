@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Neo23x0/yarern-go/internal/database"
-	"github.com/Neo23x0/yarern-go/internal/extractor"
+	"github.com/Neo23x0/yarGen-go/internal/database"
+	"github.com/Neo23x0/yarGen-go/internal/extractor"
 )
 
 func ScanGoodwareDir(dir string, opts ScanOptions, progressFn func(path string)) (*GoodwareResult, error) {
