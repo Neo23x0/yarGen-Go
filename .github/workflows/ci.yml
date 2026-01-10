@@ -70,6 +70,7 @@ jobs:
         run: go build -o bin/yargen-util${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/yargen-util
       
       - name: Verify binaries
+        shell: bash
         run: |
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
             ./bin/yargen.exe --help || true
