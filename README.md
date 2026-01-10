@@ -2,7 +2,7 @@
 
 # yarGen-Go
 
-A Go rewrite of [yarGen](https://github.com/Neo23x0/yarGen) - an automatic YARA rule generator.
+A Go rewrite of [yarGen](https://github.com/Neo23x0/yarGen) (Python) by **Florian Roth** - an automatic YARA rule generator.
 
 ## Overview
 
@@ -39,7 +39,7 @@ yarGen-Go generates YARA rules from strings found in malware files while removin
    ```
 4. **Databases:** Run `yargen-util.exe update` to download goodware databases
 5. **Configure (Optional):** Copy `.\config\config.example.yml` to `.\config\config.yaml` and set your LLM API key
-6. **Use:** Run `yargen.exe serve` and open the Web UI at [http://127.0.0.1:8080](http://127.0.0.1:8080)
+6. **Use:** Run `.\yargen.exe serve` and open the Web UI at [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
 📖 **For detailed setup instructions, see the [Step-by-Step Setup Guide](docs/SETUP.md)**
 
@@ -302,8 +302,8 @@ yarGen-Go/
 
 ## License
 
-Same as the original yarGen project.
+See [LICENSE](LICENSE) file for details. Same license as the original yarGen project (GPL-3.0).
 
 ## Credits
 
-Based on [yarGen](https://github.com/Neo23x0/yarGen) by Florian Roth.
+**yarGen-Go** is a Go rewrite of [yarGen](https://github.com/Neo23x0/yarGen) (Python), created by **Florian Roth**. 
