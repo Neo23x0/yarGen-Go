@@ -267,6 +267,61 @@ Features:
 - CRUD operations for scoring rules
 - Import/export scoring rules as JSON
 
+## AI Agent Skill
+
+For users working with AI assistants (like OpenClaw, Claude Desktop, or other MCP-based agents), a dedicated **yarGen Skill** is available to streamline rule generation workflows.
+
+### What the Skill Provides
+
+The skill embeds yarGen expertise into your AI assistant, enabling:
+
+- **One-shot sample submission** - Submit a file, get YARA rules back via `yargen-util submit`
+- **Batch rule generation** - Process entire directories with one command
+- **Database management** - Update, create, and inspect goodware databases
+- **API integration** - Direct REST API access for automation
+
+### Quick Start with AI
+
+```bash
+# Submit single sample (easiest)
+yargen-util submit -a "Your Name" malware.exe
+
+# Batch generate from directory
+yargen-generate.sh ./malware-samples --opcodes
+
+# Manage databases
+yargen-db.sh update
+```
+
+### Installation
+
+**Clone the skill into your agent's skills folder:**
+
+```bash
+# For OpenClaw
+git clone https://github.com/Neo23x0/yargen-go-skill.git ~/.openclaw/skills/yargen
+
+# Or copy from your local workspace
+cp -r ~/clawd/skills/yargen ~/.openclaw/skills/
+```
+
+### Skill Features
+
+| Capability | Description |
+|------------|-------------|
+| **Submit** | Submit samples via `yargen-util submit` with automatic polling |
+| **Generate** | Batch process directories with string/opcode extraction |
+| **Database** | Download, create, merge, and inspect goodware databases |
+| **API** | REST API client for integration workflows |
+
+The skill includes:
+- `SKILL.md` - Core documentation for agent context
+- `README.md` - Full usage guide
+- Helper scripts for common workflows
+- API reference and database best practices
+
+**Repository:** [github.com/Neo23x0/yargen-go-skill](https://github.com/Neo23x0/yargen-go-skill)
+
 ## Memory Requirements
 
 - Minimum: 4 GB RAM
