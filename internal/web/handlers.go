@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -72,6 +73,74 @@ func generateJobID() string {
 	return hex.EncodeToString(b)
 }
 
+func cloneJob(job *Job) *Job {
+	if job == nil {
+		return nil
+	}
+
+	cloned := &Job{
+		ID:        job.ID,
+		Status:    job.Status,
+		Rules:     job.Rules,
+		Error:     job.Error,
+		DebugLog:  job.DebugLog,
+		CreatedAt: job.CreatedAt,
+	}
+
+	if len(job.Files) > 0 {
+		cloned.Files = append([]UploadedFile(nil), job.Files...)
+	}
+
+	if len(job.Strings) > 0 {
+		cloned.Strings = make(map[string][]StringInfo, len(job.Strings))
+		for fileName, infos := range job.Strings {
+			cloned.Strings[fileName] = append([]StringInfo(nil), infos...)
+		}
+	}
+
+	return cloned
+}
+
+func sanitizeUploadFilename(filename string) (string, error) {
+	normalized := strings.ReplaceAll(filename, "\\", "/")
+	base := path.Base(path.Clean("/" + normalized))
+	if base == "." || base == "/" || base == "" || base == ".." {
+		return "", fmt.Errorf("invalid filename: %q", filename)
+	}
+	return base, nil
+}
+
+func dedupeFilename(name string, seen map[string]int) string {
+	count := seen[name]
+	seen[name] = count + 1
+	if count == 0 {
+		return name
+	}
+
+	ext := filepath.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	return fmt.Sprintf("%s_%d%s", stem, count+1, ext)
+}
+
+func isWithinDir(baseDir, targetPath string) bool {
+	baseAbs, err := filepath.Abs(baseDir)
+	if err != nil {
+		return false
+	}
+
+	targetAbs, err := filepath.Abs(targetPath)
+	if err != nil {
+		return false
+	}
+
+	rel, err := filepath.Rel(baseAbs, targetAbs)
+	if err != nil {
+		return false
+	}
+
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -91,6 +160,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var files []UploadedFile
+	usedNames := make(map[string]int)
 
 	for _, fileHeaders := range r.MultipartForm.File {
 		for _, fileHeader := range fileHeaders {
@@ -99,7 +169,19 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			destPath := filepath.Join(uploadDir, fileHeader.Filename)
+			safeName, err := sanitizeUploadFilename(fileHeader.Filename)
+			if err != nil {
+				file.Close()
+				continue
+			}
+			safeName = dedupeFilename(safeName, usedNames)
+
+			destPath := filepath.Join(uploadDir, safeName)
+			if !isWithinDir(uploadDir, destPath) {
+				file.Close()
+				continue
+			}
+
 			dest, err := os.Create(destPath)
 			if err != nil {
 				file.Close()
@@ -115,7 +197,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 			dest.Close()
 
 			files = append(files, UploadedFile{
-				Name: fileHeader.Filename,
+				Name: safeName,
 				Size: fileHeader.Size,
 				Path: destPath,
 			})
@@ -172,21 +254,31 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 
 	jobsMu.RLock()
 	job, exists := jobs[req.JobID]
+	var uploadDir string
+	if exists && len(job.Files) > 0 {
+		uploadDir = filepath.Dir(job.Files[0].Path)
+	}
 	jobsMu.RUnlock()
 
 	if !exists {
 		http.Error(w, "Job not found", http.StatusNotFound)
 		return
 	}
+	if uploadDir == "" {
+		http.Error(w, "No files in job", http.StatusBadRequest)
+		return
+	}
 
 	jobsMu.Lock()
 	job.Status = "processing"
+	job.Error = ""
+	job.Rules = ""
+	job.DebugLog = ""
+	job.Strings = nil
 	jobsMu.Unlock()
 
 	go func() {
 		ctx := context.Background()
-
-		uploadDir := filepath.Dir(job.Files[0].Path)
 
 		opts := service.Options{
 			MalwareDir:       uploadDir,
@@ -224,6 +316,22 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			job.Status = "completed"
 			job.Rules = result.Rules
 			job.DebugLog = result.DebugLog
+			job.Strings = make(map[string][]StringInfo, len(result.FileStrings))
+			for filePath, strs := range result.FileStrings {
+				fileName := filepath.Base(filePath)
+				info := make([]StringInfo, 0, len(strs))
+				for _, s := range strs {
+					info = append(info, StringInfo{
+						Value:         s.Value,
+						Score:         s.Score,
+						IsWide:        s.IsWide,
+						IsHighScoring: s.IsHighScoring,
+						GoodwareCount: s.GoodwareCount,
+						Selected:      true,
+					})
+				}
+				job.Strings[fileName] = info
+			}
 		}
 		jobsMu.Unlock()
 	}()
@@ -244,6 +352,7 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 
 	jobsMu.RLock()
 	job, exists := jobs[jobID]
+	jobCopy := cloneJob(job)
 	jobsMu.RUnlock()
 
 	if !exists {
@@ -254,14 +363,14 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 	if len(parts) > 1 && parts[1] == "rules" {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"yargen_rules_%s.yar\"", jobID[:8]))
-		if _, err := w.Write([]byte(job.Rules)); err != nil {
+		if _, err := w.Write([]byte(jobCopy.Rules)); err != nil {
 			http.Error(w, "Failed to write response", http.StatusInternalServerError)
 			return
 		}
 		return
 	}
 
-	writeJSON(w, job)
+	writeJSON(w, jobCopy)
 }
 
 func (s *Server) handleRules(w http.ResponseWriter, r *http.Request) {
@@ -446,6 +555,7 @@ func (s *Server) handleSuggestName(w http.ResponseWriter, r *http.Request) {
 
 	jobsMu.RLock()
 	job, exists := jobs[req.JobID]
+	jobCopy := cloneJob(job)
 	jobsMu.RUnlock()
 
 	if !exists {
@@ -453,14 +563,14 @@ func (s *Server) handleSuggestName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(job.Files) == 0 {
+	if len(jobCopy.Files) == 0 {
 		http.Error(w, "No files in job", http.StatusBadRequest)
 		return
 	}
 
 	var strings []string
-	for _, file := range job.Files {
-		if strInfo, ok := job.Strings[file.Name]; ok {
+	for _, file := range jobCopy.Files {
+		if strInfo, ok := jobCopy.Strings[file.Name]; ok {
 			for _, s := range strInfo {
 				if s.Score > 5 {
 					strings = append(strings, s.Value)
@@ -474,8 +584,8 @@ func (s *Server) handleSuggestName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	llmReq := llm.RuleNameRequest{
-		FileName:    job.Files[0].Name,
-		FileSize:    job.Files[0].Size,
+		FileName:    jobCopy.Files[0].Name,
+		FileSize:    jobCopy.Files[0].Size,
 		Strings:     strings,
 		UserTags:    req.Tags,
 		Description: req.Description,

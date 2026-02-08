@@ -25,13 +25,13 @@ func DefaultFilterOptions() FilterOptions {
 }
 
 type FilteredString struct {
-	Value          string
-	Score          float64
-	IsWide         bool
-	IsHighScoring  bool
-	GoodwareCount  int
-	EncodingInfo   *extractor.EncodingDetection
-	MatchedRules   []scoring.MatchedRule
+	Value         string
+	Score         float64
+	IsWide        bool
+	IsHighScoring bool
+	GoodwareCount int
+	EncodingInfo  *extractor.EncodingDetection
+	MatchedRules  []scoring.MatchedRule
 }
 
 func FilterStrings(
@@ -52,7 +52,11 @@ func FilterStrings(
 
 		goodwareCount := 0
 		if goodwareDB != nil {
-			goodwareCount = goodwareDB[displayStr]
+			if count, exists := goodwareDB[s]; exists {
+				goodwareCount = count
+			} else {
+				goodwareCount = goodwareDB[displayStr]
+			}
 		}
 
 		scoreResult := scoringEngine.ScoreWithGoodware(displayStr, goodwareCount, opts.ExcludeGoodware)
