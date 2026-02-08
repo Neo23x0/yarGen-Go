@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Neo23x0/yarGen-go/internal/config"
 	"github.com/Neo23x0/yarGen-go/internal/database"
@@ -20,14 +21,16 @@ import (
 type YarGen struct {
 	config        *config.Config
 	goodwareDB    *database.LoadedDatabases
+	dbMu          sync.RWMutex
 	scoringEngine *scoring.Engine
 	scoringStore  *scoring.Store
 	llmClient     llm.Client
 }
 
 type Result struct {
-	Rules    string
-	DebugLog string
+	Rules       string
+	DebugLog    string
+	FileStrings map[string][]filter.FilteredString
 }
 
 type Options struct {
@@ -113,6 +116,25 @@ func (y *YarGen) Close() error {
 }
 
 func (y *YarGen) LoadDatabases(includeOpcodes bool) error {
+	return y.ensureDatabases(includeOpcodes)
+}
+
+func (y *YarGen) ensureDatabases(includeOpcodes bool) error {
+	y.dbMu.RLock()
+	needsLoad := y.goodwareDB == nil || (includeOpcodes && len(y.goodwareDB.Opcodes) == 0)
+	y.dbMu.RUnlock()
+	if !needsLoad {
+		return nil
+	}
+
+	y.dbMu.Lock()
+	defer y.dbMu.Unlock()
+
+	needsLoad = y.goodwareDB == nil || (includeOpcodes && len(y.goodwareDB.Opcodes) == 0)
+	if !needsLoad {
+		return nil
+	}
+
 	dbs, err := database.LoadAllDatabases(y.config.Database.DbsDir, includeOpcodes)
 	if err != nil {
 		return err
@@ -124,11 +146,13 @@ func (y *YarGen) LoadDatabases(includeOpcodes bool) error {
 func (y *YarGen) Generate(ctx context.Context, opts Options) (*Result, error) {
 	var debugLog strings.Builder
 
-	if y.goodwareDB == nil {
-		if err := y.LoadDatabases(opts.IncludeOpcodes); err != nil {
-			return nil, err
-		}
+	if err := y.ensureDatabases(opts.IncludeOpcodes); err != nil {
+		return nil, err
 	}
+
+	y.dbMu.RLock()
+	goodwareDB := y.goodwareDB
+	y.dbMu.RUnlock()
 
 	fmt.Printf("[+] Scanning malware directory: %s\n", opts.MalwareDir)
 
@@ -170,7 +194,7 @@ func (y *YarGen) Generate(ctx context.Context, opts Options) (*Result, error) {
 
 		filtered := filter.FilterStrings(
 			file.Strings,
-			y.goodwareDB.Strings,
+			goodwareDB.Strings,
 			y.scoringEngine,
 			filterOpts,
 		)
@@ -229,7 +253,7 @@ func (y *YarGen) Generate(ctx context.Context, opts Options) (*Result, error) {
 		fileStrings[file.Path] = filtered
 
 		if opts.IncludeOpcodes {
-			filteredOpcodes := filter.FilterOpcodesWithLimit(file.Opcodes, y.goodwareDB.Opcodes, opts.NumOpcodes)
+			filteredOpcodes := filter.FilterOpcodesWithLimit(file.Opcodes, goodwareDB.Opcodes, opts.NumOpcodes)
 			fileOpcodes[file.Path] = filteredOpcodes
 		}
 	}
@@ -274,8 +298,9 @@ func (y *YarGen) Generate(ctx context.Context, opts Options) (*Result, error) {
 	fmt.Printf("[=] Generated %d simple rules, %d super rules\n", len(generated.SimpleRules), len(generated.SuperRules))
 
 	return &Result{
-		Rules:    output,
-		DebugLog: debugLog.String(),
+		Rules:       output,
+		DebugLog:    debugLog.String(),
+		FileStrings: fileStrings,
 	}, nil
 }
 
@@ -306,11 +331,11 @@ func (y *YarGen) refineWithLLM(ctx context.Context, fileName string, strs []filt
 	}
 
 	type scoredString struct {
-		Index         int
-		String        filter.FilteredString
+		Index          int
+		String         filter.FilteredString
 		HeuristicScore float64
-		LLMScore      int
-		CombinedScore float64
+		LLMScore       int
+		CombinedScore  float64
 	}
 
 	scored := make([]scoredString, len(strs))
