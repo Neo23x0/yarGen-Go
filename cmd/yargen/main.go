@@ -4,8 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/Neo23x0/yarGen-go/internal/config"
@@ -28,7 +30,8 @@ func main() {
 
 func runCLI() {
 	var (
-		malwareDir      = flag.String("m", "", "Path to malware directory (required)")
+		malwareDir      = flag.String("m", "", "Path to malware directory")
+		malwareFile     = flag.String("f", "", "Path to single malware file")
 		outputFile      = flag.String("o", "yargen_rules.yar", "Output rule file")
 		configPath      = flag.String("config", config.DefaultConfigPath(), "Config file path")
 		minStrLen       = flag.Int("y", 8, "Minimum string length")
@@ -66,14 +69,81 @@ func runCLI() {
 		os.Exit(0)
 	}
 
+	// Handle single file mode (-f flag)
+	var tempDir string
+	var usingSingleFile bool
+	if *malwareFile != "" {
+		if *malwareDir != "" {
+			printBanner()
+			fmt.Println("\n[E] Cannot use both -f (single file) and -m (directory) flags")
+			os.Exit(1)
+		}
+
+		// Check if file exists
+		if _, err := os.Stat(*malwareFile); os.IsNotExist(err) {
+			printBanner()
+			fmt.Printf("\n[E] File not found: %s\n", *malwareFile)
+			os.Exit(1)
+		}
+
+		// Create temp directory and copy file
+		var err error
+		tempDir, err = os.MkdirTemp("", "yargen-single-")
+		if err != nil {
+			printBanner()
+			fmt.Printf("\n[E] Failed to create temp directory: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Copy file to temp directory
+		srcFile, err := os.Open(*malwareFile)
+		if err != nil {
+			os.RemoveAll(tempDir)
+			printBanner()
+			fmt.Printf("\n[E] Failed to open file: %v\n", err)
+			os.Exit(1)
+		}
+		defer srcFile.Close()
+
+		dstPath := filepath.Join(tempDir, filepath.Base(*malwareFile))
+		dstFile, err := os.Create(dstPath)
+		if err != nil {
+			os.RemoveAll(tempDir)
+			printBanner()
+			fmt.Printf("\n[E] Failed to create temp file: %v\n", err)
+			os.Exit(1)
+		}
+		defer dstFile.Close()
+
+		if _, err := io.Copy(dstFile, srcFile); err != nil {
+			os.RemoveAll(tempDir)
+			printBanner()
+			fmt.Printf("\n[E] Failed to copy file: %v\n", err)
+			os.Exit(1)
+		}
+
+		*malwareDir = tempDir
+		usingSingleFile = true
+	}
+
+	// Ensure cleanup of temp directory
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+
 	if *malwareDir == "" {
 		printBanner()
 		flag.Usage()
-		fmt.Println("\n[E] You must specify a malware directory with -m")
+		fmt.Println("\n[E] You must specify a malware directory with -m or a single file with -f")
 		os.Exit(1)
 	}
 
 	printBanner()
+
+	// Print recommendation for single file mode
+	if usingSingleFile {
+		printSingleFileRecommendation()
+	}
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
@@ -243,5 +313,20 @@ func printBanner() {
 	fmt.Printf("         yarGen-Go v%s\n", version)
 	fmt.Println("   ")
 	fmt.Println("  Note: Rules should be post-processed")
+	fmt.Println("------------------------------------------------------------------------")
+}
+
+func printSingleFileRecommendation() {
+	fmt.Println("------------------------------------------------------------------------")
+	fmt.Println("[i] Single file mode: Database initialization may take 2-10 minutes.")
+	fmt.Println("")
+	fmt.Println("    Recommendation: If you plan to analyze more than one sample,")
+	fmt.Println("    start the yarGen server once and submit samples to it:")
+	fmt.Println("")
+	fmt.Println("      ./yargen serve              # Start server (wait for init)")
+	fmt.Println("      ./yargen-util submit file   # Submit samples (fast)")
+	fmt.Println("      pkill -f 'yargen serve'     # Stop when done")
+	fmt.Println("")
+	fmt.Println("    This avoids re-loading databases for each sample.")
 	fmt.Println("------------------------------------------------------------------------")
 }
