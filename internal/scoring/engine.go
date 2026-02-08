@@ -1,6 +1,8 @@
 package scoring
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -39,6 +41,7 @@ func (e *Engine) Reload() error {
 		if r.MatchType == MatchRegex {
 			re, err := regexp.Compile(r.Pattern)
 			if err != nil {
+				fmt.Fprintf(os.Stderr, "[W] Skipping invalid regex scoring rule %q (id=%d): %v\n", r.Name, r.ID, err)
 				continue
 			}
 			compiled[r.ID] = re

@@ -289,7 +289,11 @@ func cmdMerge() {
 		os.Exit(1)
 	}
 
-	result, _ := database.InspectDatabase(*output, 0)
+	result, err := database.InspectDatabase(*output, 0)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[W] Merged database but failed to inspect output: %v\n", err)
+		return
+	}
 	fmt.Printf("[+] Merged database has %d entries\n", result.EntryCount)
 }
 
