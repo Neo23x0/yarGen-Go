@@ -108,10 +108,10 @@ func generateSuperRule(sr SuperRuleCandidate, opts GenerateOptions, usedNames ma
 	for i, f := range sr.Files {
 		fileList[i] = f.Name
 	}
-	sb.WriteString(fmt.Sprintf("      description = \"%s - from files %s\"\n", opts.Prefix, strings.Join(fileList, ", ")))
-	sb.WriteString(fmt.Sprintf("      author = \"%s\"\n", opts.Author))
+	sb.WriteString(fmt.Sprintf("      description = \"%s\"\n", escapeMetaValue(fmt.Sprintf("%s - from files %s", opts.Prefix, strings.Join(fileList, ", ")))))
+	sb.WriteString(fmt.Sprintf("      author = \"%s\"\n", escapeMetaValue(opts.Author)))
 	if opts.Reference != "" {
-		sb.WriteString(fmt.Sprintf("      reference = \"%s\"\n", opts.Reference))
+		sb.WriteString(fmt.Sprintf("      reference = \"%s\"\n", escapeMetaValue(opts.Reference)))
 	}
 	sb.WriteString(fmt.Sprintf("      date = \"%s\"\n", time.Now().Format("2006-01-02")))
 

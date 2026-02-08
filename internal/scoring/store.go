@@ -194,18 +194,49 @@ func (s *Store) Import(rules []Rule, replaceAll bool) error {
 		}
 	}
 
-	stmt, err := tx.Prepare("INSERT INTO scoring_rules (name, description, match_type, pattern, score, enabled, is_builtin, category) VALUES (?, ?, ?, ?, ?, ?, 0, ?)")
+	stmtInsert, err := tx.Prepare("INSERT INTO scoring_rules (name, description, match_type, pattern, score, enabled, is_builtin, category) VALUES (?, ?, ?, ?, ?, ?, 0, ?)")
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer stmtInsert.Close()
+
+	stmtFind, err := tx.Prepare("SELECT id FROM scoring_rules WHERE is_builtin = 0 AND name = ? AND match_type = ? AND pattern = ? AND category = ? LIMIT 1")
+	if err != nil {
+		return err
+	}
+	defer stmtFind.Close()
+
+	stmtUpdate, err := tx.Prepare("UPDATE scoring_rules SET description = ?, score = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+	if err != nil {
+		return err
+	}
+	defer stmtUpdate.Close()
 
 	for _, r := range rules {
 		if r.IsBuiltin {
 			continue
 		}
-		if _, err := stmt.Exec(r.Name, r.Description, r.MatchType, r.Pattern, r.Score, boolToInt(r.Enabled), r.Category); err != nil {
+
+		if replaceAll {
+			if _, err := stmtInsert.Exec(r.Name, r.Description, r.MatchType, r.Pattern, r.Score, boolToInt(r.Enabled), r.Category); err != nil {
+				return err
+			}
+			continue
+		}
+
+		var existingID int64
+		err := stmtFind.QueryRow(r.Name, r.MatchType, r.Pattern, r.Category).Scan(&existingID)
+		switch {
+		case err == sql.ErrNoRows:
+			if _, err := stmtInsert.Exec(r.Name, r.Description, r.MatchType, r.Pattern, r.Score, boolToInt(r.Enabled), r.Category); err != nil {
+				return err
+			}
+		case err != nil:
 			return err
+		default:
+			if _, err := stmtUpdate.Exec(r.Description, r.Score, boolToInt(r.Enabled), existingID); err != nil {
+				return err
+			}
 		}
 	}
 
