@@ -225,19 +225,20 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 // GenerateRequest contains parameters for rule generation.
 type GenerateRequest struct {
-	JobID           string  `json:"job_id"`
-	Author          string  `json:"author"`
-	Reference       string  `json:"reference"`
-	ShowScores      bool    `json:"show_scores"`
-	ExcludeOpcodes  bool    `json:"exclude_opcodes"`
-	NoSuper         bool    `json:"no_super"`
-	ExcludeGoodware bool    `json:"exclude_goodware"`
-	NoMagic         bool    `json:"no_magic"`
-	NoFilesize      bool    `json:"no_filesize"`
-	UseLLM          bool    `json:"use_llm"`
-	MinScore        float64 `json:"min_score"`
-	MaxStrings      int     `json:"max_strings"`
-	Debug           bool    `json:"debug"`
+	JobID            string  `json:"job_id"`
+	Author           string  `json:"author"`
+	Reference        string  `json:"reference"`
+	ShowScores       bool    `json:"show_scores"`
+	ExcludeOpcodes   bool    `json:"exclude_opcodes"`
+	NoSuper          bool    `json:"no_super"`
+	ExcludeGoodware  bool    `json:"exclude_goodware"`
+	NoMagic          bool    `json:"no_magic"`
+	NoFilesize       bool    `json:"no_filesize"`
+	FilesizeMultiply int     `json:"filesize_multiplier"`
+	UseLLM           bool    `json:"use_llm"`
+	MinScore         float64 `json:"min_score"`
+	MaxStrings       int     `json:"max_strings"`
+	Debug            bool    `json:"debug"`
 }
 
 func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
@@ -290,6 +291,7 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 			ExcludeGoodware:  req.ExcludeGoodware,
 			NoMagic:          req.NoMagic,
 			NoFilesize:       req.NoFilesize,
+			FilesizeMultiply: req.FilesizeMultiply,
 			UseLLM:           req.UseLLM,
 			MinScore:         req.MinScore,
 			MaxStrings:       req.MaxStrings,
@@ -304,6 +306,9 @@ func (s *Server) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		}
 		if opts.Author == "" {
 			opts.Author = "yarGen"
+		}
+		if opts.FilesizeMultiply <= 0 {
+			opts.FilesizeMultiply = 3
 		}
 
 		result, err := s.yargen.Generate(ctx, opts)
