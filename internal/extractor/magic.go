@@ -18,6 +18,9 @@ func GetFileRange(size int64, multiplier int) string {
 	if size <= 0 {
 		return ""
 	}
+	if multiplier <= 0 {
+		multiplier = 3
+	}
 
 	maxSize := size * int64(multiplier)
 	if maxSize < 1024 {

@@ -116,6 +116,7 @@ function generateRules() {
         exclude_goodware: document.getElementById('opt-exclude-good').checked,
         no_magic: document.getElementById('opt-no-magic').checked,
         no_filesize: document.getElementById('opt-no-filesize').checked,
+        filesize_multiplier: parseInt(document.getElementById('opt-fs-mult').value) || 3,
         use_llm: document.getElementById('opt-llm').checked,
         min_score: parseFloat(document.getElementById('opt-min-score').value) || 0,
         max_strings: parseInt(document.getElementById('opt-max-strings').value) || 20,
