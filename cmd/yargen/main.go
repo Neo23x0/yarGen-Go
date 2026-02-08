@@ -69,67 +69,14 @@ func runCLI() {
 		os.Exit(0)
 	}
 
-	// Handle single file mode (-f flag)
-	var tempDir string
-	var usingSingleFile bool
-	if *malwareFile != "" {
-		if *malwareDir != "" {
-			printBanner()
-			fmt.Println("\n[E] Cannot use both -f (single file) and -m (directory) flags")
-			os.Exit(1)
-		}
-
-		// Check if file exists
-		if _, err := os.Stat(*malwareFile); os.IsNotExist(err) {
-			printBanner()
-			fmt.Printf("\n[E] File not found: %s\n", *malwareFile)
-			os.Exit(1)
-		}
-
-		// Create temp directory and copy file
-		var err error
-		tempDir, err = os.MkdirTemp("", "yargen-single-")
-		if err != nil {
-			printBanner()
-			fmt.Printf("\n[E] Failed to create temp directory: %v\n", err)
-			os.Exit(1)
-		}
-
-		// Copy file to temp directory
-		srcFile, err := os.Open(*malwareFile)
-		if err != nil {
-			os.RemoveAll(tempDir)
-			printBanner()
-			fmt.Printf("\n[E] Failed to open file: %v\n", err)
-			os.Exit(1)
-		}
-		defer srcFile.Close()
-
-		dstPath := filepath.Join(tempDir, filepath.Base(*malwareFile))
-		dstFile, err := os.Create(dstPath)
-		if err != nil {
-			os.RemoveAll(tempDir)
-			printBanner()
-			fmt.Printf("\n[E] Failed to create temp file: %v\n", err)
-			os.Exit(1)
-		}
-		defer dstFile.Close()
-
-		if _, err := io.Copy(dstFile, srcFile); err != nil {
-			os.RemoveAll(tempDir)
-			printBanner()
-			fmt.Printf("\n[E] Failed to copy file: %v\n", err)
-			os.Exit(1)
-		}
-
-		*malwareDir = tempDir
-		usingSingleFile = true
+	resolvedDir, usingSingleFile, cleanup, err := resolveMalwareInput(*malwareDir, *malwareFile)
+	if err != nil {
+		printBanner()
+		fmt.Printf("\n[E] %v\n", err)
+		os.Exit(1)
 	}
-
-	// Ensure cleanup of temp directory
-	if tempDir != "" {
-		defer os.RemoveAll(tempDir)
-	}
+	defer cleanup()
+	*malwareDir = resolvedDir
 
 	if *malwareDir == "" {
 		printBanner()
@@ -329,4 +276,58 @@ func printSingleFileRecommendation() {
 	fmt.Println("")
 	fmt.Println("    This avoids re-loading databases for each sample.")
 	fmt.Println("------------------------------------------------------------------------")
+}
+
+func resolveMalwareInput(malwareDir, malwareFile string) (resolvedDir string, usingSingleFile bool, cleanup func(), err error) {
+	cleanup = func() {}
+
+	if malwareFile == "" {
+		return malwareDir, false, cleanup, nil
+	}
+
+	if malwareDir != "" {
+		return "", false, cleanup, fmt.Errorf("cannot use both -f (single file) and -m (directory) flags")
+	}
+
+	info, err := os.Stat(malwareFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false, cleanup, fmt.Errorf("file not found: %s", malwareFile)
+		}
+		return "", false, cleanup, fmt.Errorf("failed to access file %s: %w", malwareFile, err)
+	}
+	if info.IsDir() {
+		return "", false, cleanup, fmt.Errorf("path is a directory, expected file: %s", malwareFile)
+	}
+
+	tempDir, err := os.MkdirTemp("", "yargen-single-")
+	if err != nil {
+		return "", false, cleanup, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+
+	cleanup = func() {
+		_ = os.RemoveAll(tempDir)
+	}
+
+	srcFile, err := os.Open(malwareFile)
+	if err != nil {
+		cleanup()
+		return "", false, func() {}, fmt.Errorf("failed to open file: %w", err)
+	}
+	defer srcFile.Close()
+
+	dstPath := filepath.Join(tempDir, filepath.Base(malwareFile))
+	dstFile, err := os.Create(dstPath)
+	if err != nil {
+		cleanup()
+		return "", false, func() {}, fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		cleanup()
+		return "", false, func() {}, fmt.Errorf("failed to copy file: %w", err)
+	}
+
+	return tempDir, true, cleanup, nil
 }
