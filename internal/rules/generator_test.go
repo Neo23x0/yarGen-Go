@@ -37,3 +37,11 @@ func TestGenerateSimpleRuleEscapesMetaValues(t *testing.T) {
 		t.Fatalf("expected escaped reference in generated rule, got:\n%s", rule)
 	}
 }
+
+func TestGetFilesizeCondition_DefaultsMultiplierWhenUnset(t *testing.T) {
+	got := getFilesizeCondition(49*1024, 0)
+
+	if got != "filesize < 200KB" {
+		t.Fatalf("unexpected filesize condition: got %q want %q", got, "filesize < 200KB")
+	}
+}

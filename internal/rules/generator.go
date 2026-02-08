@@ -270,6 +270,10 @@ func getMagicCondition(magic string) string {
 }
 
 func getFilesizeCondition(size int64, multiplier int) string {
+	if multiplier <= 0 {
+		multiplier = 3
+	}
+
 	maxSize := size * int64(multiplier)
 	if maxSize < 1024 {
 		maxSize = 1024
