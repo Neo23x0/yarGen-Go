@@ -134,10 +134,10 @@ func generateSimpleRule(file FileData, opts GenerateOptions, usedNames map[strin
 	sb.WriteString(fmt.Sprintf("rule %s {\n", ruleName))
 
 	sb.WriteString("   meta:\n")
-	sb.WriteString(fmt.Sprintf("      description = \"%s - file %s\"\n", opts.Prefix, file.Name))
-	sb.WriteString(fmt.Sprintf("      author = \"%s\"\n", opts.Author))
+	sb.WriteString(fmt.Sprintf("      description = \"%s\"\n", escapeMetaValue(fmt.Sprintf("%s - file %s", opts.Prefix, file.Name))))
+	sb.WriteString(fmt.Sprintf("      author = \"%s\"\n", escapeMetaValue(opts.Author)))
 	if opts.Reference != "" {
-		sb.WriteString(fmt.Sprintf("      reference = \"%s\"\n", opts.Reference))
+		sb.WriteString(fmt.Sprintf("      reference = \"%s\"\n", escapeMetaValue(opts.Reference)))
 	}
 	sb.WriteString(fmt.Sprintf("      date = \"%s\"\n", time.Now().Format("2006-01-02")))
 	sb.WriteString(fmt.Sprintf("      hash1 = \"%s\"\n", file.Hash))
@@ -290,6 +290,11 @@ func getFilesizeCondition(size int64, multiplier int) string {
 }
 
 var invalidChars = regexp.MustCompile(`[^\w]`)
+var metaEscaper = strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\r", `\r`, "\n", `\n`, "\t", `\t`)
+
+func escapeMetaValue(s string) string {
+	return metaEscaper.Replace(s)
+}
 
 func createRuleName(fileName string, usedNames map[string]int) string {
 	name := strings.TrimSuffix(fileName, "."+getExtension(fileName))
